@@ -1,8 +1,9 @@
 use std::env;
 use std::error::Error;
 use std::fs;
+use std::sync::Arc;
 
-use headless_chrome::Browser;
+use headless_chrome::{Browser, Tab};
 use headless_chrome::protocol::browser::Bounds;
 use headless_chrome::protocol::page::ScreenshotFormat;
 
@@ -13,17 +14,43 @@ fn read_file(filename: &str) -> Vec<String> {
     return contents.lines().map(|x| String::from(x)).collect();
 }
 
+fn set_dimensions(tab: &Arc<Tab>, width: Option<u32>, height: Option<u32>) {
+    tab.set_bounds(Bounds::Normal{ 
+        left: Some(0), 
+        top: Some(0), 
+        width,
+        height
+    }).ok();
+}
+
+fn get_doc_height(tab: &Arc<Tab>) -> u32 {
+    let doc = tab.wait_for_element("html").unwrap();
+    let remote_height = doc.call_js_fn(r#"
+        function getPageHeight() {
+            const body = document.body;
+            const html = document.documentElement;
+            return Math.max(
+                body.scrollHeight, 
+                body.offsetHeight, 
+                html.clientHeight, 
+                html.scrollHeight, 
+                html.offsetHeight 
+            );
+        }
+    "#, false).unwrap();
+
+    remote_height.value.unwrap().as_u64().unwrap() as u32
+}
+
 fn take_screenshot(url: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     let browser = Browser::default()?;
     let tab = browser.wait_for_initial_tab()?;
-    tab.navigate_to(url)?
-        .set_bounds(Bounds::Normal{ 
-            left: Some(0), 
-            top: Some(0), 
-            width: Some(1200), 
-            height: Some(1200) 
-        })?
-        .wait_until_navigated()?;
+    set_dimensions(&tab, Some(1200), None);
+
+    tab.navigate_to(url)?.wait_until_navigated()?;
+   
+    let height = get_doc_height(&tab);
+    set_dimensions(&tab, Some(1200), Some(height));
 
     let jpeg_data = tab.capture_screenshot(
         ScreenshotFormat::JPEG(None),
