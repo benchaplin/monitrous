@@ -21,6 +21,8 @@ fn read_file(filename: &str) -> Vec<String> {
 }
 
 fn set_dimensions(tab: &Arc<Tab>, width: Option<u32>, height: Option<u32>) {
+    println!("width {}", width.unwrap_or(102910)); 
+    println!("height {}", height.unwrap_or(102910)); 
     tab.set_bounds(Bounds::Normal{ 
         left: Some(0), 
         top: Some(0), 
@@ -50,7 +52,6 @@ fn get_doc_height(tab: &Arc<Tab>) -> u32 {
 
 fn take_screenshot(tab: &Arc<Tab>) -> Vec<u8> {
     let height = get_doc_height(&tab);
-    println!("height {}", height); 
     set_dimensions(&tab, Some(1200), Some(height));
 
     let jpeg_data = tab.capture_screenshot(
@@ -71,6 +72,7 @@ fn take_screenshots(urls: Vec<String>, output_dir: &Path) {
     for url in urls {
         tab.navigate_to(&url).unwrap()
             .wait_until_navigated().unwrap();
+        println!("at url {}", url);
 
         let jpeg_bytes = take_screenshot(&tab);
 
