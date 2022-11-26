@@ -6,6 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-headless_chrome = "0.9.0" 
+clap = { version = "4.0", features = ["derive"] }
+headless_chrome = { version = "0.9.0", features = ["fetch"] }
 image = "0.24.5"
 xml-rs = "0.8.4"
+anyhow = "1.0.66"
+indicatif = "0.17.2"
