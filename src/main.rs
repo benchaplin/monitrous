@@ -1,15 +1,11 @@
-use std::env;
-use std::error::Error;
-use std::fs;
 use std::sync::Arc;
 
-use headless_chrome::types::Bounds;
-use headless_chrome::{Browser, Tab};
+use headless_chrome::{Browser, Tab, types::Bounds};
 
 use image::ImageFormat;
 
 fn read_file(filename: &str) -> Vec<String> {
-    let contents = fs::read_to_string(filename).unwrap();
+    let contents = std::fs::read_to_string(filename).unwrap();
     return contents.lines().map(|x| String::from(x)).collect();
 }
 
@@ -22,8 +18,8 @@ fn set_dimensions(tab: &Arc<Tab>, width: Option<f64>, height: Option<f64>) {
     }).ok();
 }
 
-fn get_doc_height(tab: &Arc<Tab>) -> u32 {
-    let doc = tab.wait_for_element("div#app").unwrap();
+fn get_doc_height(tab: &Arc<Tab>) -> f64 {
+    let doc = tab.wait_for_element("html").unwrap();
     let remote_height = doc.call_js_fn(r#"
         function getPageHeight() {
             const body = document.body;
@@ -37,56 +33,46 @@ fn get_doc_height(tab: &Arc<Tab>) -> u32 {
             );
         }
     "#, Vec::new(), false).unwrap();
-    remote_height.value.unwrap().as_u64().unwrap() as u32
+
+    remote_height.value.unwrap().as_f64().unwrap()
 }
 
-fn take_screenshot(url: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let browser = Browser::default()?;
-    let tab = browser.wait_for_initial_tab()?;
+fn take_screenshot(url: &str) -> Vec<u8> {
+    let browser = Browser::default().unwrap();
+    let tab = browser.wait_for_initial_tab().unwrap();
     set_dimensions(&tab, Some(1200.0), None);
 
-    tab.navigate_to(url)?.wait_until_navigated()?;
+    tab.navigate_to(url).unwrap()
+        .wait_until_navigated().unwrap();
    
     let height = get_doc_height(&tab);
-    set_dimensions(&tab, Some(1200.0), Some(height as f64));
+    set_dimensions(&tab, Some(1200.0), Some(height));
 
     let jpeg_data = tab.capture_screenshot(
         headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption::Jpeg,
         None,
         None,
         true 
-    )?;
+    ).unwrap();
 
-    Ok(jpeg_data)
+    jpeg_data
 }
 
 fn export_jpeg(jpeg_bytes: Vec<u8>, filename: String) {
-    match image::load_from_memory_with_format(&jpeg_bytes, ImageFormat::Jpeg) {
-        Ok(_) => {
-            fs::write(filename, jpeg_bytes).unwrap();
-        }
-        Err(error) => {
-            panic!("error exporting jpg: {:?}", error);
-        }
-    } 
+    image::load_from_memory_with_format(&jpeg_bytes, ImageFormat::Jpeg).unwrap();
+    std::fs::write(filename, jpeg_bytes).unwrap();
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
 
     let urls = read_file(&args[1]);
     for url in urls {
-        match take_screenshot(&url) {
-            Ok(jpeg_bytes) => {
-                let filename = format!(
-                    "{}.jpg", 
-                    url.replace(":", "_").replace("/", "_").replace(".", "_")
-                );
-                export_jpeg(jpeg_bytes, filename);
-            }
-            Err(_) => {
-                println!("failed to screenshot {}", url);
-            }
-        }
+        let jpeg_bytes = take_screenshot(&url);
+        let filename = format!(
+            "{}.jpg", 
+            url.replace(":", "_").replace("/", "_").replace(".", "_")
+        );
+        export_jpeg(jpeg_bytes, filename);
     }
 }
