@@ -1,8 +1,9 @@
 use std::{sync::Arc, path::{PathBuf, Path}};
 
 use clap::Parser;
-use headless_chrome::{Browser, Tab, types::Bounds};
+use headless_chrome::{Browser, Tab, types::Bounds, protocol::cdp::Page::CaptureScreenshotFormatOption};
 use image::ImageFormat;
+use indicatif::ProgressBar;
 
 #[derive(Parser)]
 struct Cli {
@@ -44,19 +45,23 @@ fn get_doc_height(tab: &Arc<Tab>) -> f64 {
 }
 
 fn take_screenshots(urls: Vec<String>, output_dir: &Path) {
+    let browser = Browser::default().unwrap();
+
+    let pb = ProgressBar::new(urls.len() as u64);
     for url in urls {
-        let jpeg_bytes = take_screenshot(&url);
+        let tab = browser.new_tab().unwrap();
+        let jpeg_bytes = take_screenshot(&tab, &url);
         let filename = format!(
             "{}.jpg", 
             url.replace(":", "_").replace("/", "_").replace(".", "_")
         );
         export_jpeg(jpeg_bytes, output_dir, filename);
+        pb.println(format!("captured {}", url));
+        pb.inc(1);
     }
 }
 
-fn take_screenshot(url: &str) -> Vec<u8> {
-    let browser = Browser::default().unwrap();
-    let tab = browser.wait_for_initial_tab().unwrap();
+fn take_screenshot(tab: &Arc<Tab>, url: &str) -> Vec<u8> {
     set_dimensions(&tab, Some(1200.0), None);
 
     tab.navigate_to(url).unwrap()
@@ -66,7 +71,7 @@ fn take_screenshot(url: &str) -> Vec<u8> {
     set_dimensions(&tab, Some(1200.0), Some(height));
 
     let jpeg_data = tab.capture_screenshot(
-        headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption::Jpeg,
+        CaptureScreenshotFormatOption::Jpeg,
         None,
         None,
         true 
