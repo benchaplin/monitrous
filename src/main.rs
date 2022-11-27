@@ -1,23 +1,46 @@
-use std::{sync::Arc, path::{PathBuf, Path}};
+use std::path::{PathBuf, Path};
+use std::sync::Arc;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use headless_chrome::{Browser, Tab};
-use headless_chrome::types::Bounds;
 use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
+use headless_chrome::types::Bounds;
 use image::ImageFormat;
 use indicatif::ProgressBar;
 
 /// Monitor a list of URLs by capturing screenshots and comparing them 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
+#[clap(override_usage = "
+  monitrous capture <INPUT_FILE> <OUTPUT_DIR>
+  monitrous compare <NEW_DIR> <OLD_DIR>")]
 struct Cli {
-    /// Input file of URLs (separated by line)
-    #[arg(short, long)]
-    input_file: String,
-    /// Output directory for screenshots
-    #[arg(short, long)]
-    output_dir: PathBuf,
+    #[command(subcommand)]
+    action: Action,
 }
+
+#[derive(Subcommand, Debug)]
+enum Action {
+    /// Captures screenshots of given URLs
+    Capture {
+        /// Input file of URLs for capture (separated by line)
+        #[clap(value_parser)]
+        input_file: String,
+        /// Output directory for captured screenshots
+        #[clap(value_parser)]
+        output_dir: PathBuf,
+    },
+    /// Compares screenshots in given two directories
+    Compare {
+        /// New directory for comparison
+        #[clap(value_parser)]
+        new_dir: PathBuf,
+        /// Old directory for comparison
+        #[clap(value_parser)]
+        old_dir: PathBuf
+    }
+}
+
 
 fn read_file(filename: &str) -> Vec<String> {
     let contents = std::fs::read_to_string(filename).unwrap();
@@ -30,7 +53,7 @@ fn set_dimensions(tab: &Arc<Tab>, width: Option<f64>, height: Option<f64>) {
         top: Some(0), 
         width,
         height
-    }).ok();
+    }).ok(); 
 }
 
 fn get_doc_height(tab: &Arc<Tab>) -> f64 {
@@ -100,6 +123,13 @@ fn export_jpeg(jpeg_bytes: Vec<u8>, output_dir: &Path, filename: String) {
 fn main() {
     let args = Cli::parse();
 
-    let urls = read_file(&args.input_file);
-    take_screenshots(urls, &args.output_dir.as_path());
+    match &args.action {
+        Action::Capture { input_file, output_dir } => {
+            let urls = read_file(&input_file);
+            take_screenshots(urls, &output_dir.as_path());
+        }
+        Action::Compare { new_dir, old_dir } => {
+            println!("comparing {} to {}", new_dir.as_path().display(), old_dir.as_path().display());
+        }
+    }
 }
