@@ -43,6 +43,17 @@ fn get_doc_height(tab: &Arc<Tab>) -> f64 {
     remote_height.value.unwrap().as_f64().unwrap()
 }
 
+fn take_screenshots(urls: Vec<String>, output_dir: &Path) {
+    for url in urls {
+        let jpeg_bytes = take_screenshot(&url);
+        let filename = format!(
+            "{}.jpg", 
+            url.replace(":", "_").replace("/", "_").replace(".", "_")
+        );
+        export_jpeg(jpeg_bytes, output_dir, filename);
+    }
+}
+
 fn take_screenshot(url: &str) -> Vec<u8> {
     let browser = Browser::default().unwrap();
     let tab = browser.wait_for_initial_tab().unwrap();
@@ -77,12 +88,5 @@ fn main() {
     let args = Cli::parse();
 
     let urls = read_file(&args.input_file);
-    for url in urls {
-        let jpeg_bytes = take_screenshot(&url);
-        let filename = format!(
-            "{}.jpg", 
-            url.replace(":", "_").replace("/", "_").replace(".", "_")
-        );
-        export_jpeg(jpeg_bytes, &args.output_dir.as_path(), filename);
-    }
+    take_screenshots(urls, &args.output_dir.as_path());
 }
