@@ -16,7 +16,7 @@ use indicatif::ProgressBar;
   monitrous compare <NEW_DIR> <OLD_DIR>")]
 struct Cli {
     #[command(subcommand)]
-    action: Action,
+    action: Action
 }
 
 #[derive(Subcommand, Debug)]
@@ -25,7 +25,7 @@ enum Action {
     Capture {
         /// Input file of URLs for capture (separated by line)
         #[clap(value_parser)]
-        input_file: String,
+        input_file: PathBuf,
         /// Output directory for captured screenshots
         #[clap(value_parser)]
         output_dir: PathBuf,
@@ -42,7 +42,7 @@ enum Action {
 }
 
 
-fn read_file(filename: &str) -> Vec<String> {
+fn read_file(filename: &Path) -> Vec<String> {
     let contents = std::fs::read_to_string(filename).unwrap();
     return contents.lines().map(|x| String::from(x)).collect();
 }
@@ -125,7 +125,7 @@ fn main() {
 
     match &args.action {
         Action::Capture { input_file, output_dir } => {
-            let urls = read_file(&input_file);
+            let urls = read_file(&input_file.as_path());
             take_screenshots(urls, &output_dir.as_path());
         }
         Action::Compare { new_dir, old_dir } => {
