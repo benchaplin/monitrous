@@ -1,13 +1,21 @@
 use std::{sync::Arc, path::{PathBuf, Path}};
 
 use clap::Parser;
-use headless_chrome::{Browser, Tab, types::Bounds, protocol::cdp::Page::CaptureScreenshotFormatOption};
+use headless_chrome::{Browser, Tab};
+use headless_chrome::types::Bounds;
+use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use image::ImageFormat;
 use indicatif::ProgressBar;
 
-#[derive(Parser)]
+/// Monitor a list of URLs by capturing screenshots and comparing them 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
+    /// Input file of URLs (separated by line)
+    #[arg(short, long)]
     input_file: String,
+    /// Output directory for screenshots
+    #[arg(short, long)]
     output_dir: PathBuf,
 }
 

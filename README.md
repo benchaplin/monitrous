@@ -1,6 +1,10 @@
-# Monitrous
+# monitrous
+
+Monitor a list of URLs by capturing screenshots and comparing them.
 
 ## Usage
+
+### `capture`
 
 Create a text file of URLs to monitor, separated by line. For example:
 
@@ -11,8 +15,8 @@ https://reddit.com/r/news
 https://reddit.com/r/gifs
 ```
 
-Run the binary with the text file as an argument.
+Run the binary with options `-i urls.txt -o my-screenshots` to screenshot the URLs in urls.txt, and put the JPG images in a directory my-screenshots.
 
 ```
-./bin/monitrous urls.txt
+./bin/monitrous -i urls.txt -o my-screenshots
 ```
