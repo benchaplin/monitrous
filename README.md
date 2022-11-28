@@ -38,7 +38,7 @@ https://reddit.com/r/news
 https://reddit.com/r/gifs
 ```
 
-Pass the following args to screenshot the URLs listed in `urls.txt`, and put the resulting JPG files in the directory `my-screenshots`.
+Pass the following args to screenshot the URLs listed in `urls.txt`, and put the resulting PNG files in the directory `my-screenshots`.
 
 ```bash
 $ monitrous capture urls.txt my-screenshots
