@@ -2,6 +2,7 @@ use std::path::{PathBuf, Path};
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
+use dssim::{Dssim, Val};
 use headless_chrome::{Browser, Tab};
 use headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption;
 use headless_chrome::types::Bounds;
@@ -120,6 +121,30 @@ fn take_screenshots(urls: Vec<String>, output_dir: &Path) {
     }
 }
 
+fn compare_imgs(img1: &Path, img2: &Path) -> Val {
+    let img1_size = imagesize::size(img1).unwrap();
+    let img2_size = imagesize::size(img2).unwrap();
+    if img1_size.width != img2_size.width || img1_size.height != img2_size.height {
+        return Val::new(1.0);
+    }
+
+    let attr = Dssim::new();
+    let dssim_img1 = dssim::load_image(&attr, img1).unwrap();
+    let dssim_img2 = dssim::load_image(&attr, img2).unwrap();
+    let (diff, _) = attr.compare(&dssim_img1, &dssim_img2); 
+
+    diff
+}
+
+fn save_diff_img(img1_path: &Path, img2_path: &Path, output_path: &Path) {
+    let mut img1 = image::open(img1_path).unwrap();
+    let mut img2 = image::open(img2_path).unwrap();
+
+    let img_diff = lcs_image_diff::compare(&mut img1, &mut img2, 100.0 / 256.0).unwrap();
+
+    img_diff.save(output_path).unwrap();
+}
+
 fn compare_screenshots(old_dir: &Path, new_dir: &Path) {
     let old_paths = std::fs::read_dir(old_dir)
         .unwrap()
@@ -135,14 +160,15 @@ fn compare_screenshots(old_dir: &Path, new_dir: &Path) {
     let pb = ProgressBar::new(new_paths.len() as u64);
     for path in new_paths {
         if old_paths.contains(&path) {
+            let old_path = &old_dir.join(&path);
+            let new_path = &new_dir.join(&path);
+
             pb.println(format!("comparing {}", &path));
-
-            let mut old_img = image::open(old_dir.join(&path)).unwrap();
-            let mut new_img = image::open(new_dir.join(&path)).unwrap();
-
-            let diff = lcs_image_diff::compare(&mut old_img, &mut new_img, 100.0 / 256.0).unwrap();
-
-            diff.save(&path).unwrap();
+            let diff = compare_imgs(old_path, new_path);
+            if diff > 0.0 {
+                pb.println(format!("diff: {}, generating diff image for {}", diff, &path));
+                save_diff_img(old_path, new_path, Path::new(&path));
+            }
             pb.inc(1);
         }
     }

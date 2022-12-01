@@ -12,4 +12,6 @@ image = "0.20"
 xml-rs = "0.8.4"
 anyhow = "1.0.66"
 indicatif = "0.17.2"
+imagesize = "0.10.1"
+dssim = "3.2.4"
 lcs-image-diff = { version = "0.1", default-features = false }
