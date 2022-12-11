@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
-headless_chrome = {git = "https://github.com/atroche/rust-headless-chrome", features = ["fetch"]} 
+headless_chrome = { git = "https://github.com/atroche/rust-headless-chrome", features = ["fetch"] } 
 image = "0.20"
 xml-rs = "0.8.4"
 anyhow = "1.0.66"
